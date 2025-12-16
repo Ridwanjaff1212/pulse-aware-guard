@@ -11,8 +11,9 @@ interface SafetyStatusProps {
 const statusConfig = {
   safe: {
     icon: ShieldCheck,
+    emoji: "✅",
     label: "All Clear",
-    description: "You're protected",
+    description: "You're protected by SafePulse AI",
     bgClass: "bg-safe/10",
     borderClass: "border-safe/30",
     iconClass: "text-safe",
@@ -21,8 +22,9 @@ const statusConfig = {
   },
   monitoring: {
     icon: Shield,
-    label: "Monitoring",
-    description: "Sensors active",
+    emoji: "⚠️",
+    label: "Monitoring Active",
+    description: "AI sensors are tracking your safety",
     bgClass: "bg-warning/10",
     borderClass: "border-warning/30",
     iconClass: "text-warning",
@@ -31,8 +33,9 @@ const statusConfig = {
   },
   emergency: {
     icon: ShieldAlert,
+    emoji: "🚨",
     label: "Emergency Active",
-    description: "Help is on the way",
+    description: "Help is on the way • Contacts alerted",
     bgClass: "bg-destructive/10",
     borderClass: "border-destructive/30",
     iconClass: "text-destructive",
@@ -67,15 +70,14 @@ export function SafetyStatus({ level, className }: SafetyStatusProps) {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span
-              className={cn("h-2 w-2 rounded-full", config.dotClass)}
-            />
+            <span className="text-xl">{config.emoji}</span>
             <h3 className="text-lg font-semibold text-foreground">
               {config.label}
             </h3>
           </div>
           <p className="text-sm text-muted-foreground">{config.description}</p>
         </div>
+        <div className={cn("h-3 w-3 rounded-full", config.dotClass, config.pulseClass)} />
       </div>
     </div>
   );
