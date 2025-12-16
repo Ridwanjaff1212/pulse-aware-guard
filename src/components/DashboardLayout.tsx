@@ -4,7 +4,7 @@ import {
   Shield, Brain, Bell, Lock, MessageCircle, Mic,
   Activity, Users, ChevronRight, LogOut, Menu, X,
   Home, Settings, Map, Eye, MapPin, History, Radio,
-  Smartphone, AlertTriangle, Zap
+  Smartphone, AlertTriangle, Zap, Heart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +23,7 @@ const SECONDARY_ITEMS = [
   { id: "live-map", title: "Live Map", icon: MapPin, path: "/live-map" },
   { id: "incidents", title: "Incident History", icon: History, path: "/incidents" },
   { id: "community", title: "Community Alerts", icon: Radio, path: "/community" },
+  { id: "vitals", title: "Vitals Monitor", icon: Heart, path: "/vitals", badge: "PPG" },
 ];
 
 interface DashboardLayoutProps {

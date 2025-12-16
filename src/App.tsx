@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import LiveMap from "./pages/LiveMap";
 import Incidents from "./pages/Incidents";
 import Community from "./pages/Community";
+import Vitals from "./pages/Vitals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/live-map" element={<LiveMap />} />
             <Route path="/incidents" element={<Incidents />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/vitals" element={<Vitals />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
