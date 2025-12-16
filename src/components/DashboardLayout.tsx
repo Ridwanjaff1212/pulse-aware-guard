@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Shield, Brain, Bell, Lock, MessageCircle, Mic,
   Activity, Users, ChevronRight, LogOut, Menu, X,
-  Home, Settings, Map, Eye
+  Home, Settings, Map, Eye, MapPin, History, Radio,
+  Smartphone, AlertTriangle, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,11 +12,17 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_ITEMS = [
   { id: "dashboard", title: "Dashboard", icon: Home, path: "/" },
-  { id: "detection", title: "Smart Detection", icon: Mic, path: "/detection" },
+  { id: "detection", title: "Smart Detection", icon: Mic, path: "/detection", badge: "LIVE" },
   { id: "ai-engine", title: "AI Risk Engine", icon: Brain, path: "/ai-engine" },
   { id: "response", title: "Response Network", icon: Users, path: "/response" },
   { id: "privacy", title: "Privacy & Stealth", icon: Lock, path: "/privacy" },
-  { id: "assistant", title: "AI Assistant", icon: MessageCircle, path: "/assistant" },
+  { id: "assistant", title: "AI Assistant", icon: MessageCircle, path: "/assistant", badge: "AI" },
+];
+
+const SECONDARY_ITEMS = [
+  { id: "live-map", title: "Live Map", icon: MapPin, path: "/live-map" },
+  { id: "incidents", title: "Incident History", icon: History, path: "/incidents" },
+  { id: "community", title: "Community Alerts", icon: Radio, path: "/community" },
 ];
 
 interface DashboardLayoutProps {
@@ -67,7 +74,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-4 mb-2">Main</p>
             {SIDEBAR_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -88,14 +96,56 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                     isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                   )} />
                   <span className={cn(
+                    "font-medium text-sm flex-1 text-left",
+                    isActive ? "text-primary" : "text-foreground"
+                  )}>
+                    {item.title}
+                  </span>
+                  {(item as any).badge && (
+                    <span className={cn(
+                      "text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                      (item as any).badge === "LIVE" 
+                        ? "bg-safe/20 text-safe animate-pulse" 
+                        : "bg-accent/20 text-accent"
+                    )}>
+                      {(item as any).badge}
+                    </span>
+                  )}
+                  {isActive && (
+                    <ChevronRight className="h-4 w-4 text-primary" />
+                  )}
+                </button>
+              );
+            })}
+
+            <div className="pt-4 pb-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-4 mb-2">Tools</p>
+            </div>
+            {SECONDARY_ITEMS.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    navigate(item.path);
+                    setSidebarOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all",
+                    "hover:bg-secondary/80 group",
+                    isActive && "bg-primary/10 text-primary"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-4 w-4 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                  )} />
+                  <span className={cn(
                     "font-medium text-sm",
                     isActive ? "text-primary" : "text-foreground"
                   )}>
                     {item.title}
                   </span>
-                  {isActive && (
-                    <ChevronRight className="h-4 w-4 text-primary ml-auto" />
-                  )}
                 </button>
               );
             })}
