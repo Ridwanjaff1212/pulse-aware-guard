@@ -19,45 +19,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    let mounted = true;
 
-        // Create profile on sign up
-        if (event === "SIGNED_IN" && session?.user) {
-          const { data: existingProfile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
+    const ensureProfile = async (u: User) => {
+      try {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", u.id)
+          .maybeSingle();
 
-          if (!existingProfile) {
-            const metadata = session.user.user_metadata;
-            await supabase.from("profiles").insert({
-              user_id: session.user.id,
-              full_name: metadata?.full_name || null,
-              phone: metadata?.phone || null,
-              emergency_keyword: metadata?.emergency_keyword || "Help me now",
-              location_sharing_enabled: false,
-              keyword_enabled: true,
-              community_alerts_enabled: true,
-            });
-          }
+        if (!existingProfile) {
+          const metadata = u.user_metadata as any;
+          await supabase.from("profiles").insert({
+            user_id: u.id,
+            full_name: metadata?.full_name || null,
+            phone: metadata?.phone || null,
+            emergency_keyword: metadata?.emergency_keyword || "Help me now",
+            location_sharing_enabled: false,
+            keyword_enabled: true,
+            community_alerts_enabled: true,
+          });
         }
+      } catch {
+        // Avoid blocking auth on profile issues
       }
-    );
+    };
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set up auth state listener FIRST (sync only)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      if (event === "SIGNED_IN" && session?.user) {
+        // Defer any Supabase calls to avoid deadlocks
+        setTimeout(() => {
+          void ensureProfile(session.user);
+        }, 0);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Then initialize session (and force re-auth on every fresh load)
+    (async () => {
+      try {
+        const forceReauth = localStorage.getItem("safepulse_force_reauth") !== "false";
+        if (forceReauth) {
+          await supabase.auth.signOut();
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } catch {
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string, phone?: string, emergencyKeyword?: string) => {
