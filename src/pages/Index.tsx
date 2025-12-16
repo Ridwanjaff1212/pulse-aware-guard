@@ -4,7 +4,7 @@ import {
   Shield, Brain, Bell, AlertTriangle, Activity,
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
   CheckCircle2, Zap, Heart, Power, Radio,
-  Smartphone, Volume2, Lock, Waves, Video
+  Smartphone, Volume2, Lock, Waves, Video, Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +15,7 @@ import { EmergencyButton } from "@/components/EmergencyButton";
 import { DangerConfidenceScore } from "@/components/DangerConfidenceScore";
 import { KeywordSetupDialog } from "@/components/KeywordSetupDialog";
 import { IncidentCamera } from "@/components/IncidentCamera";
+import { IncidentPackViewer } from "@/components/IncidentPackViewer";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useKeywordDetection } from "@/hooks/useKeywordDetection";
@@ -50,6 +51,7 @@ export default function Index() {
   const [incidentCount, setIncidentCount] = useState(0);
   const [showKeywordSetup, setShowKeywordSetup] = useState(false);
   const [showIncidentCamera, setShowIncidentCamera] = useState(false);
+  const [showIncidentPack, setShowIncidentPack] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -436,7 +438,7 @@ export default function Index() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <QuickAction
             icon={Mic}
             title="Voice Detection"
@@ -445,10 +447,17 @@ export default function Index() {
             color="primary"
           />
           <QuickAction
-            icon={Brain}
-            title="AI Analysis"
-            description="Risk assessment"
-            onClick={() => navigate("/ai-engine")}
+            icon={Heart}
+            title="Vitals Monitor"
+            description="PPG heart scan"
+            onClick={() => navigate("/vitals")}
+            color="destructive"
+          />
+          <QuickAction
+            icon={Package}
+            title="Incident Pack"
+            description="View evidence"
+            onClick={() => setShowIncidentPack(true)}
             color="accent"
           />
           <QuickAction
@@ -521,6 +530,22 @@ export default function Index() {
         currentKeyword={emergencyKeyword}
         onSaveKeyword={saveKeyword}
       />
+
+      {/* Incident Pack Viewer */}
+      {showIncidentPack && (
+        <IncidentPackViewer
+          onClose={() => setShowIncidentPack(false)}
+          incidents={recentActivity.map((a) => ({
+            id: a.id,
+            type: a.type,
+            description: a.description,
+            timestamp: new Date(a.created_at),
+            location: a.location_address,
+            status: a.status,
+          }))}
+          userId={user?.id || ""}
+        />
+      )}
     </DashboardLayout>
   );
 }
@@ -577,13 +602,14 @@ function QuickAction({ icon: Icon, title, description, onClick, color }: {
   title: string;
   description: string;
   onClick: () => void;
-  color: "primary" | "accent" | "safe" | "warning";
+  color: "primary" | "accent" | "safe" | "warning" | "destructive";
 }) {
   const colorClasses = {
     primary: "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20",
     accent: "bg-accent/10 text-accent border-accent/30 hover:bg-accent/20",
     safe: "bg-safe/10 text-safe border-safe/30 hover:bg-safe/20",
     warning: "bg-warning/10 text-warning border-warning/30 hover:bg-warning/20",
+    destructive: "bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/20",
   };
 
   return (

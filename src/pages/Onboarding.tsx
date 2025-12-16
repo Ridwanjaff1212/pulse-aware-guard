@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Shield, User, Phone, Mic, MapPin, Users, Bell,
   ArrowRight, ArrowLeft, Check, ChevronRight,
-  Heart, AlertTriangle, Clock, Eye, Fingerprint, Globe
+  Heart, AlertTriangle, Clock, Eye, Fingerprint, Globe, Volume2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { VoiceTraining } from "@/components/VoiceTraining";
 
 const STEPS = [
   { id: "welcome", title: "Welcome to SafePulse", icon: Shield, description: "Your AI-powered personal safety guardian" },
   { id: "name", title: "What's your name?", icon: User, description: "We'll use this to personalize your experience" },
   { id: "phone", title: "Your phone number", icon: Phone, description: "For emergency SMS alerts to your contacts" },
   { id: "keyword", title: "Choose your safety phrase", icon: Mic, description: "Say this phrase to trigger emergency mode" },
+  { id: "voice-training", title: "Train your voice", icon: Volume2, description: "Help the AI recognize YOUR voice specifically" },
   { id: "location", title: "Enable location sharing", icon: MapPin, description: "Share your location during emergencies" },
   { id: "contacts", title: "Add emergency contacts", icon: Users, description: "People who'll be alerted in emergencies" },
   { id: "sensitivity", title: "Detection sensitivity", icon: AlertTriangle, description: "How sensitive should the AI be?" },
@@ -209,6 +211,20 @@ export default function Onboarding() {
               ))}
             </div>
           </div>
+        );
+
+      case "voice-training":
+        return (
+          <VoiceTraining
+            keyword={formData.emergencyKeyword}
+            onComplete={(profile) => {
+              toast({
+                title: "Voice Profile Saved",
+                description: "The AI will now recognize your voice",
+              });
+              handleNext();
+            }}
+          />
         );
 
       case "location":
