@@ -684,7 +684,7 @@ export default function Index() {
             </div>
             <Button 
               variant="outline"
-              onClick={decoyMode.activateDecoy}
+              onClick={() => decoyMode.activateDecoy()}
             >
               <Calculator className="h-4 w-4 mr-2" />
               Activate Decoy
@@ -725,7 +725,7 @@ export default function Index() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <QuickAction
             icon={Mic}
             title="Voice Detection"
@@ -765,8 +765,15 @@ export default function Index() {
             icon={Calculator}
             title="Decoy Mode"
             description="Calculator cover"
-            onClick={decoyMode.activateDecoy}
+            onClick={() => decoyMode.activateDecoy()}
             color="warning"
+          />
+          <QuickAction
+            icon={Lock}
+            title="Truth Lock"
+            description="Seal evidence"
+            onClick={() => navigate("/truth-lock")}
+            color="destructive"
           />
         </div>
 
