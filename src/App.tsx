@@ -17,6 +17,7 @@ import LiveMap from "./pages/LiveMap";
 import Incidents from "./pages/Incidents";
 import Community from "./pages/Community";
 import Vitals from "./pages/Vitals";
+import TruthLockTools from "./pages/TruthLockTools";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/incidents" element={<Incidents />} />
             <Route path="/community" element={<Community />} />
             <Route path="/vitals" element={<Vitals />} />
+            <Route path="/truth-lock" element={<TruthLockTools />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

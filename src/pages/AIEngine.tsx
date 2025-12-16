@@ -49,6 +49,14 @@ export default function AIEngine() {
     setIsAnalyzing(true);
     
     try {
+      // Get recent incidents for context
+      const { data: recentIncidents } = await supabase
+        .from("safety_incidents")
+        .select("type, status, created_at, voice_stress_score, ai_risk_score")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
       const { data, error } = await supabase.functions.invoke("safepulse-ai", {
         body: {
           type: "analyze_situation",
@@ -57,19 +65,45 @@ export default function AIEngine() {
             location: currentLocation 
               ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`
               : "Unknown",
-            recentActivity: "Normal browsing activity",
+            recentActivity: recentIncidents?.length 
+              ? `${recentIncidents.length} recent incidents recorded`
+              : "No recent incidents",
             deviceStatus: "Active",
+            voiceStressScore: recentIncidents?.[0]?.voice_stress_score || 0,
+            userContext: `Time: ${new Date().getHours()}:${new Date().getMinutes()}, Recent incidents: ${recentIncidents?.length || 0}`,
           },
         },
       });
 
       if (error) throw error;
 
-      // Parse AI response
+      // Parse AI response - handle both object and string responses
       const result = data?.analysis;
-      if (typeof result === "string") {
-        // Extract risk score from response
-        const scoreMatch = result.match(/(\d+)/);
+      
+      if (result && typeof result === "object") {
+        // AI returned structured JSON
+        const riskScore = result.confidence || result.riskScore || 25;
+        const riskLevel = result.riskLevel || 
+          (riskScore > 75 ? "critical" : riskScore > 50 ? "high" : riskScore > 25 ? "medium" : "low");
+        
+        setAnalysis({
+          riskScore: Math.min(riskScore, 100),
+          riskLevel: riskLevel as "low" | "medium" | "high" | "critical",
+          factors: result.factors || [
+            result.analysis || "Contextual analysis complete",
+            `Voice stress: ${result.voiceStress || "Normal"}`,
+            `Activity pattern: ${result.activityPattern || "Stable"}`,
+            `Time risk: ${new Date().getHours() >= 22 || new Date().getHours() <= 5 ? "Elevated (nighttime)" : "Normal"}`,
+          ],
+          recommendations: result.recommendations || [
+            "Keep emergency contacts updated",
+            "Enable location sharing with trusted contacts",
+            "Keep your phone charged",
+          ],
+        });
+      } else {
+        // Fallback parsing for string response
+        const scoreMatch = String(result).match(/(\d+)/);
         const score = scoreMatch ? parseInt(scoreMatch[1]) : 25;
         
         setAnalysis({
@@ -87,13 +121,6 @@ export default function AIEngine() {
             "Stay in well-lit areas when possible",
           ],
         });
-      } else {
-        setAnalysis({
-          riskScore: 15,
-          riskLevel: "low",
-          factors: ["Normal activity detected", "Safe location", "Standard time"],
-          recommendations: ["Continue normal activities", "Stay alert"],
-        });
       }
 
       toast({
@@ -104,7 +131,7 @@ export default function AIEngine() {
       console.error("Analysis error:", err);
       toast({
         title: "Analysis Error",
-        description: "Could not complete safety analysis.",
+        description: "Could not complete safety analysis. Please try again.",
         variant: "destructive",
       });
     } finally {
