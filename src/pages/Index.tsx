@@ -21,7 +21,7 @@ import { DecoyCalculator } from "@/components/DecoyCalculator";
 import { TruthLockPanel } from "@/components/TruthLockPanel";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useKeywordDetection } from "@/hooks/useKeywordDetection";
+import { useEnhancedKeywordDetection } from "@/hooks/useEnhancedKeywordDetection";
 import { useAIWitnessMode } from "@/hooks/useAIWitnessMode";
 import { useDecoyMode } from "@/hooks/useDecoyMode";
 import { useIntentVerification } from "@/hooks/useIntentVerification";
@@ -38,22 +38,36 @@ export default function Index() {
   
   // AI Witness Mode
   const witnessMode = useAIWitnessMode(user?.id);
-  
-  // Decoy Mode
+
+  // Decoy Mode (default landing for signed-in users)
   const decoyMode = useDecoyMode();
 
   // Truth Lock for evidence protection
   const truthLock = useTruthLock(user?.id);
 
-  // Intent Verification callback - activates AI Witness when intent confirmed
+  // Autonomous Safety (signals feed into intent verification)
+  const {
+    dangerState,
+    startMonitoring,
+    stopMonitoring,
+    toggleAutonomousMode,
+    addSignal,
+  } = useAutonomousSafety(user?.id, () => {
+    if (!witnessMode.isActive) witnessMode.activate();
+  });
+
+  // Intent Verification callback - activates emergency flow
   const handleIntentConfirmed = useCallback(async () => {
     console.log("🚨 INTENT CONFIRMED - Activating emergency response");
-    
+
+    // Immediately switch UI back to decoy
+    decoyMode.activateDecoy({ silent: true });
+
     // Activate AI Witness Mode
     if (!witnessMode.isActive) {
       witnessMode.activate();
     }
-    
+
     // Create incident and lock evidence
     const { data: incident } = await supabase
       .from("safety_incidents")
@@ -65,22 +79,20 @@ export default function Index() {
       })
       .select()
       .single();
-    
+
     if (incident) {
-      // Activate Truth Lock
       truthLock.lockIncident(incident.id, 24);
-      
-      // Send emergency emails
+
       const { data: contacts } = await supabase
         .from("emergency_contacts")
-        .select("*")
+        .select("name,email")
         .eq("user_id", user!.id);
-      
-      const emailContacts = contacts?.filter(c => c.email) || [];
+
+      const emailContacts = contacts?.filter((c) => c.email) || [];
       if (emailContacts.length > 0) {
         await supabase.functions.invoke("send-emergency-email", {
           body: {
-            contacts: emailContacts.map(c => ({ name: c.name, email: c.email })),
+            contacts: emailContacts,
             userId: user!.id,
             incidentId: incident.id,
             message: "Emergency intent verified. Location and evidence being gathered.",
@@ -88,51 +100,75 @@ export default function Index() {
         });
       }
     }
-    
+
     toast({
       title: "🚨 Emergency Response Activated",
-      description: "AI Witness recording, Truth Lock engaged, contacts notified.",
+      description: "Recording evidence and notifying contacts.",
       variant: "destructive",
     });
-  }, [witnessMode, truthLock, user, toast]);
+  }, [decoyMode, witnessMode, truthLock, user, toast]);
 
-  // Intent Verification
   const intentVerification = useIntentVerification(handleIntentConfirmed);
 
-  // Scream Detection - feeds into intent verification
-  const handleScreamDetected = useCallback((confidence: number) => {
-    console.log("😱 Scream detected with confidence:", confidence);
-    intentVerification.registerScream(confidence);
-    addSignal({
-      type: "voice",
-      value: confidence * 100,
-      description: "Scream detected",
-    });
-  }, [intentVerification]);
-
+  // Scream Detection - triggers intent verification (and can trigger emergency alone via hook logic)
+  const handleScreamDetected = useCallback(
+    (confidence: number) => {
+      intentVerification.registerScream(confidence);
+      addSignal({
+        type: "voice",
+        value: confidence * 100,
+        description: "Scream detected",
+      });
+    },
+    [intentVerification, addSignal]
+  );
   const screamDetection = useScreamDetection(handleScreamDetected);
-  
-  // Autonomous Safety with witness callback
-  const {
-    dangerState,
-    startMonitoring,
-    stopMonitoring,
-    toggleAutonomousMode,
-    addSignal,
-  } = useAutonomousSafety(user?.id, () => {
-    // Auto-activate witness mode at 80% danger
-    if (!witnessMode.isActive) {
-      witnessMode.activate();
-    }
-  });
+
+  // Enhanced keyword detection (voiceprint + speech)
+  const onKeywordDetected = useCallback(
+    (confidence: number) => {
+      intentVerification.registerKeyword(confidence);
+      addSignal({
+        type: "voice",
+        value: confidence * 100,
+        description: `Emergency keyword detected (${Math.round(confidence * 100)}%)`,
+      });
+    },
+    [intentVerification, addSignal]
+  );
+
+  const onVoiceVerified = useCallback(
+    (confidence: number) => {
+      // Extra weight when biometrically verified
+      addSignal({
+        type: "voice",
+        value: 90 + confidence * 10,
+        description: "Voiceprint verified",
+      });
+    },
+    [addSignal]
+  );
 
   const {
     isListening: keywordListening,
     keyword: emergencyKeyword,
-    isActivated: keywordActivated,
-    saveKeyword,
-    toggleListening: toggleKeywordListening,
-  } = useKeywordDetection(user?.id);
+    detectionCount,
+    voiceMatchConfidence,
+    isVoiceMatched,
+    updateKeyword: saveKeyword,
+    startListening: startKeywordListening,
+    stopListening: stopKeywordListening,
+  } = useEnhancedKeywordDetection(user?.id, onKeywordDetected, onVoiceVerified);
+
+  const toggleKeywordListening = useCallback(
+    (enabled: boolean) => {
+      if (enabled) startKeywordListening();
+      else stopKeywordListening();
+    },
+    [startKeywordListening, stopKeywordListening]
+  );
+
+  const keywordActivated = detectionCount > 0;
 
   const [userName, setUserName] = useState("");
   const [currentLocation, setCurrentLocation] = useState<string>("Detecting...");

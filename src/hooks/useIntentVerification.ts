@@ -83,20 +83,20 @@ export function useIntentVerification(onIntentConfirmed: () => void) {
     );
 
     // Intent confirmation logic:
-    // REQUIRED: (Phone drop OR sudden motion) AND (keyword repeated within 2 min)
-    // BONUS: scream OR stress spike
-    
+    // 1) Phone drop AND keyword repeated within 2 minutes
+    // 2) OR Strong scream triggers immediately
+
     const hasPhoneDrop = recentEvents.some((e) => e.type === "phone_drop");
     const keywordEvents = recentEvents.filter((e) => e.type === "keyword_detected");
-    const hasScream = recentEvents.some((e) => e.type === "scream_detected");
-    const hasStress = recentEvents.some((e) => e.type === "stress_spike");
 
-    // Check if keyword was repeated within window
-    const keywordRepeated = keywordEvents.length >= 1 && hasPhoneDrop;
-    const keywordDoubleRepeated = keywordEvents.length >= 2;
-    
-    // Core intent confirmed: drop + keyword OR double keyword
-    const intentConfirmed = (hasPhoneDrop && keywordEvents.length >= 1) || keywordDoubleRepeated;
+    const screamStrong = recentEvents.some(
+      (e) => e.type === "scream_detected" && e.confidence >= 0.85
+    );
+
+    const keywordRepeatedWithinWindow = keywordEvents.length >= 2;
+
+    // Core intent confirmed: (drop + repeated keyword) OR strong scream
+    const intentConfirmed = screamStrong || (hasPhoneDrop && keywordRepeatedWithinWindow);
 
     return intentConfirmed;
   }, []);

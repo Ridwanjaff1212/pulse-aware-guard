@@ -33,27 +33,31 @@ export function useDecoyMode() {
     }
   }, []);
 
-  const activateDecoy = useCallback(() => {
+  const activateDecoy = useCallback((opts?: { silent?: boolean }) => {
     setState(prev => ({ ...prev, isDecoyActive: true }));
-    
+
     // Store state in localStorage
     localStorage.setItem('safepulse_decoy_active', 'true');
-    
-    toast({
-      title: "Calculator Mode",
-      description: "Safety monitoring continues invisibly",
-      duration: 2000,
-    });
+
+    if (!opts?.silent) {
+      toast({
+        title: "Calculator Mode",
+        description: "Safety monitoring continues invisibly",
+        duration: 2000,
+      });
+    }
   }, []);
 
-  const deactivateDecoy = useCallback(() => {
+  const deactivateDecoy = useCallback((opts?: { silent?: boolean }) => {
     setState(prev => ({ ...prev, isDecoyActive: false }));
     localStorage.removeItem('safepulse_decoy_active');
-    
-    toast({
-      title: "SafePulse Restored",
-      description: "Full interface active",
-    });
+
+    if (!opts?.silent) {
+      toast({
+        title: "SafePulse Restored",
+        description: "Full interface active",
+      });
+    }
   }, []);
 
   const handleSecretTap = useCallback(() => {
