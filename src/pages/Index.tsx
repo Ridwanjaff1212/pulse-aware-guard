@@ -4,7 +4,7 @@ import {
   Shield, Brain, Bell, AlertTriangle, Activity,
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
   CheckCircle2, Zap, Heart, Power, Radio,
-  Smartphone, Volume2, Lock, Waves
+  Smartphone, Volume2, Lock, Waves, Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -13,8 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { EmergencyButton } from "@/components/EmergencyButton";
 import { DangerConfidenceScore } from "@/components/DangerConfidenceScore";
+import { KeywordSetupDialog } from "@/components/KeywordSetupDialog";
+import { IncidentCamera } from "@/components/IncidentCamera";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useKeywordDetection } from "@/hooks/useKeywordDetection";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +35,21 @@ export default function Index() {
     addSignal,
   } = useAutonomousSafety(user?.id);
 
+  const {
+    isListening: keywordListening,
+    keyword: emergencyKeyword,
+    isActivated: keywordActivated,
+    saveKeyword,
+    toggleListening: toggleKeywordListening,
+  } = useKeywordDetection(user?.id);
+
   const [userName, setUserName] = useState("");
   const [currentLocation, setCurrentLocation] = useState<string>("Detecting...");
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [contactCount, setContactCount] = useState(0);
   const [incidentCount, setIncidentCount] = useState(0);
+  const [showKeywordSetup, setShowKeywordSetup] = useState(false);
+  const [showIncidentCamera, setShowIncidentCamera] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -293,6 +306,107 @@ export default function Index() {
           </div>
         </div>
 
+        {/* Voice Keyword Detection - THE KILLER FEATURE */}
+        <div className={cn(
+          "rounded-2xl border p-6 transition-all",
+          keywordListening 
+            ? "border-destructive/50 bg-destructive/5" 
+            : "border-border bg-card"
+        )}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "h-14 w-14 rounded-2xl flex items-center justify-center",
+                keywordListening ? "bg-destructive/20 animate-pulse" : "bg-secondary"
+              )}>
+                <Mic className={cn(
+                  "h-7 w-7",
+                  keywordListening ? "text-destructive" : "text-muted-foreground"
+                )} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  Voice Keyword Detection
+                  {keywordListening && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive animate-pulse">
+                      LISTENING
+                    </span>
+                  )}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {emergencyKeyword 
+                    ? `Say "${emergencyKeyword}" to trigger emergency` 
+                    : "Set up your secret emergency keyword"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowKeywordSetup(true)}
+              >
+                {emergencyKeyword ? "Change Keyword" : "Setup Keyword"}
+              </Button>
+              {emergencyKeyword && (
+                <Switch
+                  checked={keywordListening}
+                  onCheckedChange={toggleKeywordListening}
+                />
+              )}
+            </div>
+          </div>
+
+          {keywordActivated && (
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 animate-pulse">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                <div>
+                  <p className="font-semibold text-destructive">EMERGENCY KEYWORD DETECTED!</p>
+                  <p className="text-sm text-destructive/80">
+                    Emergency protocols activated. Help is on the way.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!emergencyKeyword && (
+            <div className="p-4 rounded-xl bg-secondary/50 border border-border">
+              <p className="text-sm text-muted-foreground">
+                <strong>How it works:</strong> Set a secret keyword that will trigger emergency response 
+                even when your phone is locked. Simply say your keyword out loud and SafePulse will 
+                automatically alert your contacts, share your location, and start recording.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Incident Camera */}
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Video className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Incident Camera</h3>
+                <p className="text-xs text-muted-foreground">Record evidence during emergencies</p>
+              </div>
+            </div>
+            <Button 
+              variant={showIncidentCamera ? "destructive" : "outline"}
+              onClick={() => setShowIncidentCamera(!showIncidentCamera)}
+            >
+              <Video className="h-4 w-4 mr-2" />
+              {showIncidentCamera ? "Hide Camera" : "Open Camera"}
+            </Button>
+          </div>
+          
+          {showIncidentCamera && (
+            <IncidentCamera userId={user?.id} className="mt-4" />
+          )}
+        </div>
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
@@ -399,6 +513,14 @@ export default function Index() {
           )}
         </div>
       </div>
+
+      {/* Keyword Setup Dialog */}
+      <KeywordSetupDialog
+        open={showKeywordSetup}
+        onOpenChange={setShowKeywordSetup}
+        currentKeyword={emergencyKeyword}
+        onSaveKeyword={saveKeyword}
+      />
     </DashboardLayout>
   );
 }
