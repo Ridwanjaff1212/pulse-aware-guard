@@ -12,6 +12,7 @@ import AIEngine from "./pages/AIEngine";
 import ResponseNetwork from "./pages/ResponseNetwork";
 import PrivacyStealth from "./pages/PrivacyStealth";
 import AIAssistant from "./pages/AIAssistant";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/response" element={<ResponseNetwork />} />
             <Route path="/privacy" element={<PrivacyStealth />} />
             <Route path="/assistant" element={<AIAssistant />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
