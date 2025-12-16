@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_alert_zones: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          radius_meters: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          radius_meters?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          radius_meters?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contact_push_subscriptions: {
+        Row: {
+          auth_key: string
+          contact_email: string
+          created_at: string
+          device_name: string | null
+          endpoint: string
+          id: string
+          p256dh_key: string
+        }
+        Insert: {
+          auth_key: string
+          contact_email: string
+          created_at?: string
+          device_name?: string | null
+          endpoint: string
+          id?: string
+          p256dh_key: string
+        }
+        Update: {
+          auth_key?: string
+          contact_email?: string
+          created_at?: string
+          device_name?: string | null
+          endpoint?: string
+          id?: string
+          p256dh_key?: string
+        }
+        Relationships: []
+      }
       emergency_alerts: {
         Row: {
           created_at: string
@@ -249,6 +309,39 @@ export type Database = {
           keyword_enabled?: boolean | null
           location_sharing_enabled?: boolean | null
           phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          device_name: string | null
+          endpoint: string
+          id: string
+          p256dh_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          device_name?: string | null
+          endpoint: string
+          id?: string
+          p256dh_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          device_name?: string | null
+          endpoint?: string
+          id?: string
+          p256dh_key?: string
           updated_at?: string
           user_id?: string
         }
