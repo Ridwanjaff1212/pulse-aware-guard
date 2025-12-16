@@ -152,6 +152,27 @@ Respond with JSON:
         userPrompt = data.message || "Hello";
         break;
 
+      case "emergency_chat":
+        systemPrompt = `You are SafePulse Emergency AI, a crisis support assistant. Someone may be in danger and needs calm, reassuring guidance.
+
+CRITICAL GUIDELINES:
+- Stay extremely calm and reassuring
+- Keep responses SHORT (2-3 sentences max)
+- If they're in immediate physical danger, tell them to call 911 first
+- Help them think clearly: breathing, awareness of surroundings
+- Suggest practical safety actions: move to public area, stay on phone, make noise
+- Never dismiss their fears
+- Ask clarifying questions to understand their situation better
+- If they mention violence/assault, prioritize their physical safety
+
+Respond with JSON:
+- response: your calming, actionable message`;
+        
+        const history = data.conversationHistory || [];
+        const historyText = history.map((m: any) => `${m.role}: ${m.content}`).join("\n");
+        userPrompt = `Previous conversation:\n${historyText}\n\nUser's current message: ${data.message}`;
+        break;
+
       default:
         throw new Error("Unknown analysis type");
     }
