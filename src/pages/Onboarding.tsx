@@ -38,13 +38,13 @@ export default function Onboarding() {
     phone: "",
     emergencyKeyword: "Help me now",
     locationEnabled: false,
-    contacts: [] as { name: string; phone: string; relationship: string }[],
+    contacts: [] as { name: string; phone: string; email: string; relationship: string }[],
     sensitivity: "balanced",
     notificationsEnabled: true,
     communityAlerts: true,
     stealthMode: false,
   });
-  const [newContact, setNewContact] = useState({ name: "", phone: "", relationship: "" });
+  const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", relationship: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -86,6 +86,7 @@ export default function Onboarding() {
             user_id: user!.id,
             name: c.name,
             phone: c.phone,
+            email: c.email,
             relationship: c.relationship,
             is_primary: i === 0,
           }))
@@ -110,12 +111,12 @@ export default function Onboarding() {
   };
 
   const addContact = () => {
-    if (newContact.name && newContact.phone) {
+    if (newContact.name && (newContact.phone || newContact.email)) {
       setFormData({
         ...formData,
         contacts: [...formData.contacts, { ...newContact }],
       });
-      setNewContact({ name: "", phone: "", relationship: "" });
+      setNewContact({ name: "", phone: "", email: "", relationship: "" });
     }
   };
 
@@ -300,6 +301,13 @@ export default function Onboarding() {
                 className="bg-background"
               />
               <Input
+                type="email"
+                placeholder="Email address (for emergency alerts)"
+                value={newContact.email}
+                onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                className="bg-background"
+              />
+              <Input
                 placeholder="Relationship (e.g., Parent, Friend)"
                 value={newContact.relationship}
                 onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
@@ -309,7 +317,7 @@ export default function Onboarding() {
                 onClick={addContact}
                 variant="outline"
                 className="w-full"
-                disabled={!newContact.name || !newContact.phone}
+                disabled={!newContact.name || (!newContact.phone && !newContact.email)}
               >
                 Add Contact
               </Button>

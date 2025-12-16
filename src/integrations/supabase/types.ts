@@ -65,6 +65,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          email: string | null
           id: string
           is_primary: boolean | null
           name: string
@@ -75,6 +76,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_primary?: boolean | null
           name: string
@@ -85,6 +87,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           is_primary?: boolean | null
           name?: string
@@ -122,6 +125,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "incident_evidence_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "safety_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_locks: {
+        Row: {
+          auto_release_hours: number
+          created_at: string
+          evidence_hash: string | null
+          id: string
+          incident_id: string | null
+          is_released: boolean
+          locked_at: string
+          released_at: string | null
+          unlock_deadline: string
+          user_id: string
+        }
+        Insert: {
+          auto_release_hours?: number
+          created_at?: string
+          evidence_hash?: string | null
+          id?: string
+          incident_id?: string | null
+          is_released?: boolean
+          locked_at?: string
+          released_at?: string | null
+          unlock_deadline: string
+          user_id: string
+        }
+        Update: {
+          auto_release_hours?: number
+          created_at?: string
+          evidence_hash?: string | null
+          id?: string
+          incident_id?: string | null
+          is_released?: boolean
+          locked_at?: string
+          released_at?: string | null
+          unlock_deadline?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_locks_incident_id_fkey"
             columns: ["incident_id"]
             isOneToOne: false
             referencedRelation: "safety_incidents"
@@ -279,6 +329,45 @@ export type Database = {
           type?: string
           user_id?: string
           voice_stress_score?: number | null
+        }
+        Relationships: []
+      }
+      voice_profiles: {
+        Row: {
+          created_at: string
+          energy_average: number | null
+          id: string
+          is_trained: boolean
+          keyword: string
+          mfcc_average: Json | null
+          pitch_average: number | null
+          samples_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          energy_average?: number | null
+          id?: string
+          is_trained?: boolean
+          keyword: string
+          mfcc_average?: Json | null
+          pitch_average?: number | null
+          samples_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          energy_average?: number | null
+          id?: string
+          is_trained?: boolean
+          keyword?: string
+          mfcc_average?: Json | null
+          pitch_average?: number | null
+          samples_count?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
