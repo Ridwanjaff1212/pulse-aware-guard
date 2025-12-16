@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Shield, Brain, Bell, AlertTriangle, Activity,
@@ -18,11 +18,15 @@ import { IncidentCamera } from "@/components/IncidentCamera";
 import { IncidentPackViewer } from "@/components/IncidentPackViewer";
 import { AIWitnessPanel } from "@/components/AIWitnessPanel";
 import { DecoyCalculator } from "@/components/DecoyCalculator";
+import { TruthLockPanel } from "@/components/TruthLockPanel";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useKeywordDetection } from "@/hooks/useKeywordDetection";
 import { useAIWitnessMode } from "@/hooks/useAIWitnessMode";
 import { useDecoyMode } from "@/hooks/useDecoyMode";
+import { useIntentVerification } from "@/hooks/useIntentVerification";
+import { useScreamDetection } from "@/hooks/useScreamDetection";
+import { useTruthLock } from "@/hooks/useTruthLock";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +41,76 @@ export default function Index() {
   
   // Decoy Mode
   const decoyMode = useDecoyMode();
+
+  // Truth Lock for evidence protection
+  const truthLock = useTruthLock(user?.id);
+
+  // Intent Verification callback - activates AI Witness when intent confirmed
+  const handleIntentConfirmed = useCallback(async () => {
+    console.log("🚨 INTENT CONFIRMED - Activating emergency response");
+    
+    // Activate AI Witness Mode
+    if (!witnessMode.isActive) {
+      witnessMode.activate();
+    }
+    
+    // Create incident and lock evidence
+    const { data: incident } = await supabase
+      .from("safety_incidents")
+      .insert({
+        user_id: user!.id,
+        type: "intent_verified",
+        description: "Multi-signal intent verification confirmed distress",
+        status: "active",
+      })
+      .select()
+      .single();
+    
+    if (incident) {
+      // Activate Truth Lock
+      truthLock.lockIncident(incident.id, 24);
+      
+      // Send emergency emails
+      const { data: contacts } = await supabase
+        .from("emergency_contacts")
+        .select("*")
+        .eq("user_id", user!.id);
+      
+      const emailContacts = contacts?.filter(c => c.email) || [];
+      if (emailContacts.length > 0) {
+        await supabase.functions.invoke("send-emergency-email", {
+          body: {
+            contacts: emailContacts.map(c => ({ name: c.name, email: c.email })),
+            userId: user!.id,
+            incidentId: incident.id,
+            message: "Emergency intent verified. Location and evidence being gathered.",
+          },
+        });
+      }
+    }
+    
+    toast({
+      title: "🚨 Emergency Response Activated",
+      description: "AI Witness recording, Truth Lock engaged, contacts notified.",
+      variant: "destructive",
+    });
+  }, [witnessMode, truthLock, user, toast]);
+
+  // Intent Verification
+  const intentVerification = useIntentVerification(handleIntentConfirmed);
+
+  // Scream Detection - feeds into intent verification
+  const handleScreamDetected = useCallback((confidence: number) => {
+    console.log("😱 Scream detected with confidence:", confidence);
+    intentVerification.registerScream(confidence);
+    addSignal({
+      type: "voice",
+      value: confidence * 100,
+      description: "Scream detected",
+    });
+  }, [intentVerification]);
+
+  const screamDetection = useScreamDetection(handleScreamDetected);
   
   // Autonomous Safety with witness callback
   const {
@@ -448,6 +522,117 @@ export default function Index() {
           onDeactivate={witnessMode.deactivate}
           onGenerateReport={witnessMode.generateIncidentReport}
         />
+
+        {/* Truth Lock Panel */}
+        <TruthLockPanel
+          isLocked={truthLock.isLocked}
+          timeRemaining={truthLock.timeRemaining}
+          canCancel={truthLock.canCancel}
+          evidenceCount={truthLock.evidence.length}
+          autoReleaseHours={truthLock.autoReleaseHours}
+          onActivate={async () => {
+            const { data } = await supabase
+              .from("safety_incidents")
+              .insert({
+                user_id: user!.id,
+                type: "manual_lock",
+                description: "Manual Truth Lock activation",
+                status: "active",
+              })
+              .select()
+              .single();
+            if (data) truthLock.lockIncident(data.id, 24);
+          }}
+          onCancel={truthLock.cancelLock}
+          onManualRelease={truthLock.releaseEvidence}
+        />
+
+        {/* Scream Detection Control */}
+        <div className={cn(
+          "rounded-2xl border p-6 transition-all",
+          screamDetection.isListening 
+            ? "border-warning/50 bg-warning/5" 
+            : "border-border bg-card"
+        )}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "h-10 w-10 rounded-xl flex items-center justify-center",
+                screamDetection.isListening ? "bg-warning/20 animate-pulse" : "bg-secondary"
+              )}>
+                <Waves className={cn(
+                  "h-5 w-5",
+                  screamDetection.isListening ? "text-warning" : "text-muted-foreground"
+                )} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  Scream Detection
+                  {screamDetection.isListening && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-warning/20 text-warning">
+                      LISTENING
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  AI detects screams and distress sounds
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={screamDetection.isListening}
+              onCheckedChange={(checked) => {
+                if (checked) screamDetection.startListening();
+                else screamDetection.stopListening();
+              }}
+            />
+          </div>
+          {screamDetection.isListening && (
+            <div className="mt-4 p-3 rounded-lg bg-secondary/50">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Detection Confidence</span>
+                <span className="font-bold text-warning">
+                  {(screamDetection.screamConfidence * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Intent Verification Status */}
+        {intentVerification.confirmationScore > 0 && (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-destructive/20 flex items-center justify-center animate-pulse">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Intent Verification Active</h3>
+                <p className="text-xs text-muted-foreground">
+                  Multi-signal analysis in progress
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Confirmation Score</span>
+                <span className="font-bold text-destructive">
+                  {intentVerification.confirmationScore.toFixed(0)}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                <div 
+                  className="h-full bg-destructive transition-all duration-300"
+                  style={{ width: `${intentVerification.confirmationScore}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Keywords detected: {intentVerification.keywordCount} | 
+                {intentVerification.isIntentConfirmed ? " ✓ Intent Confirmed" : " Analyzing..."}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Decoy Mode Control */}
         <div className="rounded-2xl border border-border bg-card p-6">
