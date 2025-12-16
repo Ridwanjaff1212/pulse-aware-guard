@@ -1,12 +1,22 @@
-import { Shield, Settings, Bell } from "lucide-react";
+import { Shield, Settings, Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   className?: string;
 }
 
 export function Header({ className }: HeaderProps) {
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
   return (
     <header
       className={cn(
@@ -32,6 +42,9 @@ export function Header({ className }: HeaderProps) {
           </Button>
           <Button variant="ghost" size="icon">
             <Settings className="h-5 w-5 text-muted-foreground" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleSignOut}>
+            <LogOut className="h-5 w-5 text-muted-foreground" />
           </Button>
         </div>
       </div>

@@ -14,7 +14,274 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      emergency_alerts: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          incident_id: string | null
+          latitude: number
+          longitude: number
+          message: string | null
+          radius_meters: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          incident_id?: string | null
+          latitude: number
+          longitude: number
+          message?: string | null
+          radius_meters?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          incident_id?: string | null
+          latitude?: number
+          longitude?: number
+          message?: string | null
+          radius_meters?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_alerts_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "safety_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emergency_contacts: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          name: string
+          phone: string
+          relationship: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          name: string
+          phone: string
+          relationship: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          name?: string
+          phone?: string
+          relationship?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      incident_evidence: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          incident_id: string
+          metadata: Json | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          incident_id: string
+          metadata?: Json | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          incident_id?: string
+          metadata?: Json | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_evidence_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "safety_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_history: {
+        Row: {
+          accuracy: number | null
+          address: string | null
+          created_at: string
+          id: string
+          is_emergency: boolean | null
+          latitude: number
+          longitude: number
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_emergency?: boolean | null
+          latitude: number
+          longitude: number
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_emergency?: boolean | null
+          latitude?: number
+          longitude?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          community_alerts_enabled: boolean | null
+          created_at: string
+          emergency_keyword: string | null
+          full_name: string | null
+          id: string
+          keyword_enabled: boolean | null
+          location_sharing_enabled: boolean | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          community_alerts_enabled?: boolean | null
+          created_at?: string
+          emergency_keyword?: string | null
+          full_name?: string | null
+          id?: string
+          keyword_enabled?: boolean | null
+          location_sharing_enabled?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          community_alerts_enabled?: boolean | null
+          created_at?: string
+          emergency_keyword?: string | null
+          full_name?: string | null
+          id?: string
+          keyword_enabled?: boolean | null
+          location_sharing_enabled?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      safe_zones: {
+        Row: {
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          radius_meters?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      safety_incidents: {
+        Row: {
+          ai_risk_score: number | null
+          created_at: string
+          description: string
+          id: string
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          motion_data: Json | null
+          resolved_at: string | null
+          status: string
+          type: string
+          user_id: string
+          voice_stress_score: number | null
+        }
+        Insert: {
+          ai_risk_score?: number | null
+          created_at?: string
+          description: string
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          motion_data?: Json | null
+          resolved_at?: string | null
+          status?: string
+          type: string
+          user_id: string
+          voice_stress_score?: number | null
+        }
+        Update: {
+          ai_risk_score?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          motion_data?: Json | null
+          resolved_at?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+          voice_stress_score?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
