@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ai-witness-analyze]
 verify_jwt = false
+
+[functions.send-emergency-email]
+verify_jwt = false
