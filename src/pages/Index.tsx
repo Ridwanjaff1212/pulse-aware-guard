@@ -4,7 +4,7 @@ import {
   Shield, Brain, Bell, AlertTriangle, Activity,
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
   CheckCircle2, Zap, Heart, Power, Radio,
-  Smartphone, Volume2, Lock, Waves, Video, Package
+  Smartphone, Volume2, Lock, Waves, Video, Package, Calculator
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -16,9 +16,13 @@ import { DangerConfidenceScore } from "@/components/DangerConfidenceScore";
 import { KeywordSetupDialog } from "@/components/KeywordSetupDialog";
 import { IncidentCamera } from "@/components/IncidentCamera";
 import { IncidentPackViewer } from "@/components/IncidentPackViewer";
+import { AIWitnessPanel } from "@/components/AIWitnessPanel";
+import { DecoyCalculator } from "@/components/DecoyCalculator";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useKeywordDetection } from "@/hooks/useKeywordDetection";
+import { useAIWitnessMode } from "@/hooks/useAIWitnessMode";
+import { useDecoyMode } from "@/hooks/useDecoyMode";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -28,13 +32,25 @@ export default function Index() {
   const { toast } = useToast();
   const { requestPermission, permission } = usePushNotifications();
   
+  // AI Witness Mode
+  const witnessMode = useAIWitnessMode(user?.id);
+  
+  // Decoy Mode
+  const decoyMode = useDecoyMode();
+  
+  // Autonomous Safety with witness callback
   const {
     dangerState,
     startMonitoring,
     stopMonitoring,
     toggleAutonomousMode,
     addSignal,
-  } = useAutonomousSafety(user?.id);
+  } = useAutonomousSafety(user?.id, () => {
+    // Auto-activate witness mode at 80% danger
+    if (!witnessMode.isActive) {
+      witnessMode.activate();
+    }
+  });
 
   const {
     isListening: keywordListening,
@@ -154,6 +170,16 @@ export default function Index() {
           <Shield className="h-8 w-8 text-primary" />
         </div>
       </div>
+    );
+  }
+
+  // Show Decoy Calculator when in decoy mode
+  if (decoyMode.isDecoyActive) {
+    return (
+      <DecoyCalculator 
+        onSecretTap={decoyMode.handleSecretTap}
+        gestureProgress={decoyMode.secretGestureProgress}
+      />
     );
   }
 
@@ -409,6 +435,46 @@ export default function Index() {
           )}
         </div>
 
+        {/* AI Witness Mode Panel */}
+        <AIWitnessPanel
+          isActive={witnessMode.isActive}
+          isRecording={witnessMode.isRecording}
+          isTranscribing={witnessMode.isTranscribing}
+          evidence={witnessMode.evidence}
+          currentTranscript={witnessMode.currentTranscript}
+          threatAnalysis={witnessMode.threatAnalysis}
+          recordingDuration={witnessMode.recordingDuration}
+          onActivate={witnessMode.activate}
+          onDeactivate={witnessMode.deactivate}
+          onGenerateReport={witnessMode.generateIncidentReport}
+        />
+
+        {/* Decoy Mode Control */}
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center">
+                <Calculator className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Decoy App Mode</h3>
+                <p className="text-xs text-muted-foreground">Transform into innocent calculator app</p>
+              </div>
+            </div>
+            <Button 
+              variant="outline"
+              onClick={decoyMode.activateDecoy}
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Activate Decoy
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3 p-3 rounded-lg bg-secondary/50">
+            <strong>Secret Gesture:</strong> Tap-Tap-DoubleTap-Tap to toggle decoy mode from anywhere. 
+            Safety monitoring continues invisibly in the background.
+          </p>
+        </div>
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
@@ -438,13 +504,20 @@ export default function Index() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <QuickAction
             icon={Mic}
             title="Voice Detection"
             description="Keyword trigger"
             onClick={() => navigate("/detection")}
             color="primary"
+          />
+          <QuickAction
+            icon={Eye}
+            title="AI Witness"
+            description="Evidence recording"
+            onClick={witnessMode.isActive ? witnessMode.deactivate : witnessMode.activate}
+            color={witnessMode.isActive ? "destructive" : "accent"}
           />
           <QuickAction
             icon={Heart}
@@ -468,10 +541,10 @@ export default function Index() {
             color="safe"
           />
           <QuickAction
-            icon={Lock}
-            title="Privacy Mode"
-            description="Stealth features"
-            onClick={() => navigate("/privacy")}
+            icon={Calculator}
+            title="Decoy Mode"
+            description="Calculator cover"
+            onClick={decoyMode.activateDecoy}
             color="warning"
           />
         </div>

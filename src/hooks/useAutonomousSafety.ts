@@ -16,6 +16,7 @@ export interface DangerState {
   isMonitoring: boolean;
   lastUpdate: Date;
   autonomousMode: boolean;
+  witnessTriggered: boolean;
 }
 
 const SIGNAL_WEIGHTS = {
@@ -34,7 +35,7 @@ const RISK_THRESHOLDS = {
   emergency: 81,
 };
 
-export function useAutonomousSafety(userId: string | undefined) {
+export function useAutonomousSafety(userId: string | undefined, onWitnessThreshold?: () => void) {
   const { toast } = useToast();
   const [dangerState, setDangerState] = useState<DangerState>({
     confidenceScore: 0,
@@ -43,6 +44,7 @@ export function useAutonomousSafety(userId: string | undefined) {
     isMonitoring: false,
     lastUpdate: new Date(),
     autonomousMode: false,
+    witnessTriggered: false,
   });
 
   const recognitionRef = useRef<any>(null);
@@ -140,6 +142,19 @@ export function useAutonomousSafety(userId: string | undefined) {
       triggerAutonomousResponse();
     }
   }, [dangerState.riskLevel, dangerState.autonomousMode, triggerAutonomousResponse]);
+
+  // Trigger AI Witness Mode at 80% confidence
+  useEffect(() => {
+    if (dangerState.confidenceScore >= 80 && !dangerState.witnessTriggered && onWitnessThreshold) {
+      setDangerState(prev => ({ ...prev, witnessTriggered: true }));
+      onWitnessThreshold();
+      toast({
+        title: "🔴 AI Witness Mode Activated",
+        description: "Danger confidence exceeded 80%. Recording evidence.",
+        variant: "destructive",
+      });
+    }
+  }, [dangerState.confidenceScore, dangerState.witnessTriggered, onWitnessThreshold, toast]);
 
   const startVoiceMonitoring = useCallback(() => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
