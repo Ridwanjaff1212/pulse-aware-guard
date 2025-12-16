@@ -18,6 +18,55 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Handle image generation
+    if (type === "generate_image") {
+      console.log("SafePulse AI generating image:", data.prompt);
+      
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            { role: "user", content: `Generate a safety-themed image: ${data.prompt}. Make it helpful, professional, and related to personal safety.` }
+          ],
+          modalities: ["image", "text"]
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Image generation error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        throw new Error(`Image generation error: ${response.status}`);
+      }
+
+      const aiResponse = await response.json();
+      const message = aiResponse.choices?.[0]?.message;
+      const imageUrl = message?.images?.[0]?.image_url?.url;
+      const textContent = message?.content || "Here's your generated image:";
+
+      console.log("Image generated successfully");
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: textContent,
+        imageUrl: imageUrl 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let systemPrompt = "";
     let userPrompt = "";
 
@@ -89,7 +138,17 @@ serve(async (req) => {
         break;
 
       case "chat":
-        systemPrompt = `You are SafePulse AI, a compassionate and helpful safety assistant. You help users with personal safety concerns, provide guidance during stressful situations, and offer emotional support. Keep responses concise, warm, and actionable. If someone is in immediate danger, always recommend calling emergency services.`;
+        systemPrompt = `You are SafePulse AI, a compassionate and helpful safety assistant. You help users with personal safety concerns, provide guidance during stressful situations, and offer emotional support. 
+
+Key guidelines:
+- Keep responses concise, warm, and actionable
+- If someone is in immediate danger, always recommend calling emergency services
+- Provide practical safety tips when asked
+- Be empathetic and supportive
+- You can help generate safety-related images when asked
+
+Respond with JSON:
+- response: your helpful message to the user`;
         userPrompt = data.message || "Hello";
         break;
 
@@ -122,6 +181,13 @@ serve(async (req) => {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please try again later." }), {
+          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
