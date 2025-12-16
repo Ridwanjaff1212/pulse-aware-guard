@@ -3,13 +3,18 @@ import { useNavigate } from "react-router-dom";
 import {
   Shield, Brain, Bell, AlertTriangle, Activity,
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
-  CheckCircle2, XCircle, Zap, Heart
+  CheckCircle2, Zap, Heart, Power, Radio,
+  Smartphone, Volume2, Lock, Waves
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { EmergencyButton } from "@/components/EmergencyButton";
+import { DangerConfidenceScore } from "@/components/DangerConfidenceScore";
+import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -17,13 +22,21 @@ export default function Index() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { requestPermission, permission } = usePushNotifications();
   
+  const {
+    dangerState,
+    startMonitoring,
+    stopMonitoring,
+    toggleAutonomousMode,
+    addSignal,
+  } = useAutonomousSafety(user?.id);
+
   const [userName, setUserName] = useState("");
-  const [safetyScore, setSafetyScore] = useState(92);
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [isMotionActive, setIsMotionActive] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>("Detecting...");
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [contactCount, setContactCount] = useState(0);
+  const [incidentCount, setIncidentCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -35,6 +48,7 @@ export default function Index() {
     if (user) {
       loadProfile();
       loadRecentActivity();
+      loadStats();
       getCurrentLocation();
     }
   }, [user]);
@@ -58,6 +72,21 @@ export default function Index() {
       .limit(5);
     
     if (data) setRecentActivity(data);
+  };
+
+  const loadStats = async () => {
+    const { count: contacts } = await supabase
+      .from("emergency_contacts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user!.id);
+    
+    const { count: incidents } = await supabase
+      .from("safety_incidents")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user!.id);
+
+    setContactCount(contacts || 0);
+    setIncidentCount(incidents || 0);
   };
 
   const getCurrentLocation = () => {
@@ -85,8 +114,13 @@ export default function Index() {
       description: "Alerting your emergency contacts and sharing location...",
       variant: "destructive",
     });
+
+    addSignal({
+      type: "voice",
+      value: 100,
+      description: "Manual SOS activation",
+    });
     
-    // Create incident
     await supabase.from("safety_incidents").insert({
       user_id: user!.id,
       type: "sos_trigger",
@@ -95,22 +129,7 @@ export default function Index() {
     });
 
     loadRecentActivity();
-  };
-
-  const toggleVoiceDetection = () => {
-    setIsVoiceActive(!isVoiceActive);
-    toast({
-      title: isVoiceActive ? "Voice Detection Paused" : "Voice Detection Active",
-      description: isVoiceActive ? "Keyword detection is now paused" : "Listening for your safety keyword",
-    });
-  };
-
-  const toggleMotionDetection = () => {
-    setIsMotionActive(!isMotionActive);
-    toast({
-      title: isMotionActive ? "Motion Detection Paused" : "Motion Detection Active",
-      description: isMotionActive ? "Motion monitoring paused" : "Monitoring for unusual movements",
-    });
+    loadStats();
   };
 
   if (loading || !user) {
@@ -126,7 +145,7 @@ export default function Index() {
   return (
     <DashboardLayout title="AI Safety Dashboard">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Welcome Banner */}
+        {/* Welcome Banner with ASM Status */}
         <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -134,13 +153,34 @@ export default function Index() {
                 Welcome back, {userName?.split(" ")[0] || "Guardian"}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Your AI-powered safety guardian is active and monitoring
+                {dangerState.isMonitoring 
+                  ? "Autonomous Safety AI is actively protecting you"
+                  : "Enable ASM for AI-powered protection"}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-safe/10 border border-safe/30">
-                <div className="h-2 w-2 rounded-full bg-safe animate-pulse" />
-                <span className="text-sm font-medium text-safe">Protected</span>
+              {permission !== "granted" && (
+                <Button variant="outline" size="sm" onClick={requestPermission}>
+                  <Bell className="h-4 w-4 mr-2" />
+                  Enable Notifications
+                </Button>
+              )}
+              <div className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all",
+                dangerState.isMonitoring 
+                  ? "bg-safe/10 border-safe/30" 
+                  : "bg-secondary border-border"
+              )}>
+                <div className={cn(
+                  "h-2 w-2 rounded-full",
+                  dangerState.isMonitoring ? "bg-safe animate-pulse" : "bg-muted-foreground"
+                )} />
+                <span className={cn(
+                  "text-sm font-medium",
+                  dangerState.isMonitoring ? "text-safe" : "text-muted-foreground"
+                )}>
+                  {dangerState.isMonitoring ? "ASM Active" : "ASM Inactive"}
+                </span>
               </div>
             </div>
           </div>
@@ -157,133 +197,160 @@ export default function Index() {
             <div className="flex flex-col items-center py-4">
               <EmergencyButton onTrigger={handleEmergencyTrigger} />
             </div>
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Press and hold for 2 seconds to activate
+            </p>
           </div>
 
-          {/* AI Safety Score */}
-          <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              AI Safety Analysis
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Safety Score */}
-              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Safety Score</span>
-                  <TrendingUp className="h-4 w-4 text-safe" />
-                </div>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-bold text-safe">{safetyScore}</span>
-                  <span className="text-muted-foreground mb-1">/100</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
-                  <div 
-                    className="h-full bg-safe transition-all" 
-                    style={{ width: `${safetyScore}%` }} 
-                  />
-                </div>
-              </div>
+          {/* Danger Confidence Score - THE KEY FEATURE */}
+          <div className="lg:col-span-2">
+            <DangerConfidenceScore dangerState={dangerState} />
+          </div>
+        </div>
 
-              {/* Location Status */}
-              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Location</span>
-                  <MapPin className="h-4 w-4 text-primary" />
-                </div>
-                <p className="font-semibold text-foreground truncate">{currentLocation}</p>
-                <p className="text-xs text-muted-foreground mt-1">GPS tracking active</p>
+        {/* ASM Control Panel */}
+        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-background p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "h-14 w-14 rounded-2xl flex items-center justify-center transition-all",
+                dangerState.isMonitoring 
+                  ? "bg-primary/20 animate-pulse-safe" 
+                  : "bg-secondary"
+              )}>
+                <Brain className={cn(
+                  "h-7 w-7",
+                  dangerState.isMonitoring ? "text-primary" : "text-muted-foreground"
+                )} />
               </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Autonomous Safety Mode (ASM)
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  AI that decides when you're in danger and acts on your behalf
+                </p>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              onClick={dangerState.isMonitoring ? stopMonitoring : startMonitoring}
+              variant={dangerState.isMonitoring ? "outline" : "default"}
+              className={cn(
+                "min-w-[140px]",
+                dangerState.isMonitoring && "border-primary/50"
+              )}
+            >
+              <Power className="h-4 w-4 mr-2" />
+              {dangerState.isMonitoring ? "Pause ASM" : "Start ASM"}
+            </Button>
+          </div>
 
-              {/* Risk Level */}
-              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Risk Level</span>
-                  <Shield className="h-4 w-4 text-safe" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MonitoringCard
+              icon={Mic}
+              title="Voice Analysis"
+              description="Distress detection"
+              active={dangerState.isMonitoring}
+            />
+            <MonitoringCard
+              icon={Activity}
+              title="Motion Sensor"
+              description="Fall detection"
+              active={dangerState.isMonitoring}
+            />
+            <MonitoringCard
+              icon={MapPin}
+              title="Location Watch"
+              description="Safe zone alerts"
+              active={dangerState.isMonitoring}
+            />
+            <MonitoringCard
+              icon={Clock}
+              title="Activity Monitor"
+              description="Inactivity alerts"
+              active={dangerState.isMonitoring}
+            />
+          </div>
+
+          {/* Autonomous Mode Toggle */}
+          <div className="mt-6 p-4 rounded-xl bg-warning/5 border border-warning/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-warning" />
+                <div>
+                  <p className="font-medium text-foreground">Autonomous Response</p>
+                  <p className="text-xs text-muted-foreground">
+                    AI will automatically trigger emergency protocols
+                  </p>
                 </div>
-                <p className="font-semibold text-safe">Low Risk</p>
-                <p className="text-xs text-muted-foreground mt-1">No threats detected</p>
               </div>
+              <Switch
+                checked={dangerState.autonomousMode}
+                onCheckedChange={toggleAutonomousMode}
+              />
             </div>
           </div>
         </div>
 
-        {/* Quick Controls */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button
-            onClick={toggleVoiceDetection}
-            className={cn(
-              "p-4 rounded-xl border transition-all",
-              isVoiceActive 
-                ? "border-primary bg-primary/10" 
-                : "border-border bg-card hover:bg-secondary/50"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "h-10 w-10 rounded-xl flex items-center justify-center",
-                isVoiceActive ? "bg-primary/20" : "bg-secondary"
-              )}>
-                <Mic className={cn("h-5 w-5", isVoiceActive ? "text-primary" : "text-muted-foreground")} />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-sm text-foreground">Voice Detection</p>
-                <p className="text-xs text-muted-foreground">{isVoiceActive ? "Active" : "Paused"}</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={toggleMotionDetection}
-            className={cn(
-              "p-4 rounded-xl border transition-all",
-              isMotionActive 
-                ? "border-accent bg-accent/10" 
-                : "border-border bg-card hover:bg-secondary/50"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                "h-10 w-10 rounded-xl flex items-center justify-center",
-                isMotionActive ? "bg-accent/20" : "bg-secondary"
-              )}>
-                <Activity className={cn("h-5 w-5", isMotionActive ? "text-accent" : "text-muted-foreground")} />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-sm text-foreground">Motion Sensor</p>
-                <p className="text-xs text-muted-foreground">{isMotionActive ? "Active" : "Paused"}</p>
-              </div>
-            </div>
-          </button>
-
-          <button
+          <StatCard
+            icon={MapPin}
+            label="Location"
+            value={currentLocation}
+            onClick={() => navigate("/privacy")}
+          />
+          <StatCard
+            icon={Users}
+            label="Contacts"
+            value={`${contactCount} saved`}
             onClick={() => navigate("/response")}
-            className="p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center">
-                <Users className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-sm text-foreground">Contacts</p>
-                <p className="text-xs text-muted-foreground">Manage</p>
-              </div>
-            </div>
-          </button>
+          />
+          <StatCard
+            icon={Shield}
+            label="Incidents"
+            value={`${incidentCount} total`}
+            onClick={() => navigate("/privacy")}
+          />
+          <StatCard
+            icon={Brain}
+            label="AI Analysis"
+            value="Ready"
+            onClick={() => navigate("/ai-engine")}
+          />
+        </div>
 
-          <button
-            onClick={() => navigate("/assistant")}
-            className="p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center">
-                <Brain className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-sm text-foreground">AI Assistant</p>
-                <p className="text-xs text-muted-foreground">Chat</p>
-              </div>
-            </div>
-          </button>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <QuickAction
+            icon={Mic}
+            title="Voice Detection"
+            description="Keyword trigger"
+            onClick={() => navigate("/detection")}
+            color="primary"
+          />
+          <QuickAction
+            icon={Brain}
+            title="AI Analysis"
+            description="Risk assessment"
+            onClick={() => navigate("/ai-engine")}
+            color="accent"
+          />
+          <QuickAction
+            icon={Users}
+            title="Response Network"
+            description="Manage contacts"
+            onClick={() => navigate("/response")}
+            color="safe"
+          />
+          <QuickAction
+            icon={Lock}
+            title="Privacy Mode"
+            description="Stealth features"
+            onClick={() => navigate("/privacy")}
+            color="warning"
+          />
         </div>
 
         {/* Recent Activity */}
@@ -333,5 +400,81 @@ export default function Index() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function MonitoringCard({ icon: Icon, title, description, active }: {
+  icon: any;
+  title: string;
+  description: string;
+  active: boolean;
+}) {
+  return (
+    <div className={cn(
+      "p-4 rounded-xl border transition-all",
+      active 
+        ? "bg-primary/5 border-primary/30" 
+        : "bg-secondary/30 border-border"
+    )}>
+      <Icon className={cn(
+        "h-5 w-5 mb-2",
+        active ? "text-primary" : "text-muted-foreground"
+      )} />
+      <p className="font-medium text-sm text-foreground">{title}</p>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      {active && (
+        <div className="flex items-center gap-1 mt-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-safe animate-pulse" />
+          <span className="text-[10px] text-safe">Active</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, onClick }: {
+  icon: any;
+  label: string;
+  value: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
+    >
+      <Icon className="h-5 w-5 text-muted-foreground mb-2" />
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-semibold text-foreground truncate">{value}</p>
+    </button>
+  );
+}
+
+function QuickAction({ icon: Icon, title, description, onClick, color }: {
+  icon: any;
+  title: string;
+  description: string;
+  onClick: () => void;
+  color: "primary" | "accent" | "safe" | "warning";
+}) {
+  const colorClasses = {
+    primary: "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20",
+    accent: "bg-accent/10 text-accent border-accent/30 hover:bg-accent/20",
+    safe: "bg-safe/10 text-safe border-safe/30 hover:bg-safe/20",
+    warning: "bg-warning/10 text-warning border-warning/30 hover:bg-warning/20",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "p-4 rounded-xl border transition-all text-left",
+        colorClasses[color]
+      )}
+    >
+      <Icon className="h-6 w-6 mb-2" />
+      <p className="font-medium text-sm text-foreground">{title}</p>
+      <p className="text-xs opacity-70">{description}</p>
+    </button>
   );
 }
