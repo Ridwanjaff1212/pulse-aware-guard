@@ -88,6 +88,11 @@ serve(async (req) => {
         Resolution Status: ${data.status || "pending"}`;
         break;
 
+      case "chat":
+        systemPrompt = `You are SafePulse AI, a compassionate and helpful safety assistant. You help users with personal safety concerns, provide guidance during stressful situations, and offer emotional support. Keep responses concise, warm, and actionable. If someone is in immediate danger, always recommend calling emergency services.`;
+        userPrompt = data.message || "Hello";
+        break;
+
       default:
         throw new Error("Unknown analysis type");
     }
