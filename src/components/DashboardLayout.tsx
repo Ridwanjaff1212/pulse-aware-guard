@@ -20,10 +20,17 @@ const SIDEBAR_ITEMS = [
 ];
 
 const SECONDARY_ITEMS = [
+  { id: "panic", title: "Panic Button", icon: AlertTriangle, path: "/panic", badge: "SOS" },
   { id: "live-map", title: "Live Map", icon: MapPin, path: "/live-map" },
   { id: "incidents", title: "Incident History", icon: History, path: "/incidents" },
-  { id: "community", title: "Community Alerts", icon: Radio, path: "/community" },
+  { id: "community", title: "Community Shield", icon: Radio, path: "/community" },
   { id: "vitals", title: "Vitals Monitor", icon: Heart, path: "/vitals", badge: "PPG" },
+];
+
+const UTILITY_ITEMS = [
+  { id: "install", title: "Install App", icon: Smartphone, path: "/install" },
+  { id: "contact-register", title: "Contact Registration", icon: Users, path: "/contact-register" },
+  { id: "truth-lock", title: "Truth Lock", icon: Lock, path: "/truth-lock" },
 ];
 
 interface DashboardLayoutProps {
@@ -123,6 +130,38 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-4 mb-2">Tools</p>
             </div>
             {SECONDARY_ITEMS.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    navigate(item.path);
+                    setSidebarOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all",
+                    "hover:bg-secondary/80 group",
+                    isActive && "bg-primary/10 text-primary"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-4 w-4 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                  )} />
+                  <span className={cn(
+                    "font-medium text-sm",
+                    isActive ? "text-primary" : "text-foreground"
+                  )}>
+                    {item.title}
+                  </span>
+                </button>
+              );
+            })}
+
+            <div className="pt-4 pb-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground px-4 mb-2">Utilities</p>
+            </div>
+            {UTILITY_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <button
