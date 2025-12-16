@@ -13,6 +13,9 @@ import ResponseNetwork from "./pages/ResponseNetwork";
 import PrivacyStealth from "./pages/PrivacyStealth";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
+import LiveMap from "./pages/LiveMap";
+import Incidents from "./pages/Incidents";
+import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,9 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyStealth />} />
             <Route path="/assistant" element={<AIAssistant />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/live-map" element={<LiveMap />} />
+            <Route path="/incidents" element={<Incidents />} />
+            <Route path="/community" element={<Community />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

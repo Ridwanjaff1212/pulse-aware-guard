@@ -1,1 +1,7 @@
 project_id = "ltirtohsycmomfxsqmcv"
+
+[functions.safepulse-ai]
+verify_jwt = false
+
+[functions.send-emergency-sms]
+verify_jwt = false
