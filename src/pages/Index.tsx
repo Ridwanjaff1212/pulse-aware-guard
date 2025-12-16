@@ -519,25 +519,69 @@ export default function Index() {
           )}
         </div>
 
-        {/* Incident Camera */}
+        {/* Incident Camera with Truth Lock Integration */}
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
-                <Video className="h-5 w-5 text-destructive" />
+              <div className={cn(
+                "h-10 w-10 rounded-xl flex items-center justify-center",
+                truthLock.isLocked ? "bg-safe/20" : "bg-destructive/10"
+              )}>
+                <Video className={cn(
+                  "h-5 w-5",
+                  truthLock.isLocked ? "text-safe" : "text-destructive"
+                )} />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Incident Camera</h3>
-                <p className="text-xs text-muted-foreground">Record evidence during emergencies</p>
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  Incident Camera
+                  {truthLock.isLocked && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-safe/20 text-safe">
+                      LOCKED
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {truthLock.isLocked 
+                    ? "Evidence sealed - cannot be deleted" 
+                    : "Record evidence during emergencies"}
+                </p>
               </div>
             </div>
-            <Button 
-              variant={showIncidentCamera ? "destructive" : "outline"}
-              onClick={() => setShowIncidentCamera(!showIncidentCamera)}
-            >
-              <Video className="h-4 w-4 mr-2" />
-              {showIncidentCamera ? "Hide Camera" : "Open Camera"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {showIncidentCamera && !truthLock.isLocked && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={async () => {
+                    const { data } = await supabase
+                      .from("safety_incidents")
+                      .insert({
+                        user_id: user!.id,
+                        type: "camera_evidence",
+                        description: "Camera evidence locked via incident camera",
+                        status: "active",
+                      })
+                      .select()
+                      .single();
+                    if (data) {
+                      truthLock.addEvidence("video", "Camera recording captured");
+                      truthLock.lockIncident(data.id, 24);
+                    }
+                  }}
+                >
+                  <Lock className="h-4 w-4 mr-1" />
+                  Lock Evidence
+                </Button>
+              )}
+              <Button 
+                variant={showIncidentCamera ? "destructive" : "outline"}
+                onClick={() => setShowIncidentCamera(!showIncidentCamera)}
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {showIncidentCamera ? "Hide Camera" : "Open Camera"}
+              </Button>
+            </div>
           </div>
           
           {showIncidentCamera && (
@@ -722,6 +766,84 @@ export default function Index() {
             value="Ready"
             onClick={() => navigate("/ai-engine")}
           />
+        </div>
+
+        {/* Install & Share Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-background p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Smartphone className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Install SafePulse App</h3>
+                <p className="text-xs text-muted-foreground">One-tap SOS from home screen</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Add SafePulse to your home screen for instant access during emergencies.
+            </p>
+            <Button className="w-full" onClick={() => navigate("/install")}>
+              Install Now
+            </Button>
+          </div>
+          
+          <div className="rounded-2xl border border-safe/30 bg-gradient-to-br from-safe/10 to-background p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-safe/20 flex items-center justify-center">
+                <Users className="h-5 w-5 text-safe" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Invite Emergency Contacts</h3>
+                <p className="text-xs text-muted-foreground">Help them receive your alerts</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Share the registration link with contacts so they can receive instant push alerts.
+            </p>
+            <Button 
+              variant="outline" 
+              className="w-full border-safe/30 hover:bg-safe/10"
+              onClick={() => {
+                const link = `${window.location.origin}/contact-register?from=${userName || "A friend"}`;
+                navigator.clipboard.writeText(link);
+                toast({
+                  title: "Link Copied!",
+                  description: "Share this link with your emergency contacts",
+                });
+              }}
+            >
+              Copy Registration Link
+            </Button>
+          </div>
+        </div>
+
+        {/* Safety Tips */}
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Safety Tips
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl bg-secondary/30">
+              <p className="font-medium text-sm text-foreground mb-1">Set Up Your Keyword</p>
+              <p className="text-xs text-muted-foreground">
+                Create a secret emergency phrase that triggers alerts even when your phone is locked.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-secondary/30">
+              <p className="font-medium text-sm text-foreground mb-1">Add Safe Zones</p>
+              <p className="text-xs text-muted-foreground">
+                Mark locations as safe so the AI can detect when you're in an unusual place.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-secondary/30">
+              <p className="font-medium text-sm text-foreground mb-1">Train Voice Recognition</p>
+              <p className="text-xs text-muted-foreground">
+                Record your voice so SafePulse can verify it's really you calling for help.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
