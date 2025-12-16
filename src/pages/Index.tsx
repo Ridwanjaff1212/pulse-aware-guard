@@ -4,7 +4,8 @@ import {
   Shield, Brain, Bell, AlertTriangle, Activity,
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
   CheckCircle2, Zap, Heart, Power, Radio,
-  Smartphone, Volume2, Lock, Waves, Video, Package, Calculator
+  Smartphone, Volume2, Lock, Waves, Video, Package, Calculator,
+  Radar, ShieldAlert, Network
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +20,9 @@ import { IncidentPackViewer } from "@/components/IncidentPackViewer";
 import { AIWitnessPanel } from "@/components/AIWitnessPanel";
 import { DecoyCalculator } from "@/components/DecoyCalculator";
 import { TruthLockPanel } from "@/components/TruthLockPanel";
+import { PreDangerPanel } from "@/components/PreDangerPanel";
+import { CommunityShieldPanel } from "@/components/CommunityShieldPanel";
+import { EmergencyAIChatbot } from "@/components/EmergencyAIChatbot";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useEnhancedKeywordDetection } from "@/hooks/useEnhancedKeywordDetection";
@@ -27,6 +31,9 @@ import { useDecoyMode } from "@/hooks/useDecoyMode";
 import { useIntentVerification } from "@/hooks/useIntentVerification";
 import { useScreamDetection } from "@/hooks/useScreamDetection";
 import { useTruthLock } from "@/hooks/useTruthLock";
+import { useSituationalIntelligence } from "@/hooks/useSituationalIntelligence";
+import { useAntiCoercion } from "@/hooks/useAntiCoercion";
+import { useCommunityShield } from "@/hooks/useCommunityShield";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +52,14 @@ export default function Index() {
   // Truth Lock for evidence protection
   const truthLock = useTruthLock(user?.id);
 
-  // Autonomous Safety (signals feed into intent verification)
+  // Situational Intelligence Engine (SIE) - Predictive Safety
+  const situationalIntelligence = useSituationalIntelligence(user?.id);
+
+  // Anti-Coercion Interface System (ACIS)
+  const antiCoercion = useAntiCoercion(user?.id);
+
+  // Community Shield Network
+  const communityShield = useCommunityShield(user?.id);
   const {
     dangerState,
     startMonitoring,
@@ -627,6 +641,28 @@ export default function Index() {
           onManualRelease={truthLock.releaseEvidence}
         />
 
+        {/* Situational Intelligence Engine Panel */}
+        <PreDangerPanel
+          state={situationalIntelligence.preDangerState}
+          isMonitoring={situationalIntelligence.isMonitoring}
+          onStart={situationalIntelligence.startMonitoring}
+          onStop={situationalIntelligence.stopMonitoring}
+          onReset={situationalIntelligence.resetState}
+        />
+
+        {/* Community Shield Network Panel */}
+        <CommunityShieldPanel
+          state={communityShield.shieldState}
+          isMonitoring={communityShield.isMonitoring}
+          onStart={communityShield.startMonitoring}
+          onStop={communityShield.stopMonitoring}
+          onRequestWatchers={communityShield.requestWatchers}
+          onActivateShield={communityShield.activateShield}
+          onEmergencyShield={communityShield.emergencyShield}
+          onCancelAlert={communityShield.cancelAlert}
+          onRadiusChange={communityShield.setAlertRadius}
+        />
+
         {/* Scream Detection Control */}
         <div className={cn(
           "rounded-2xl border p-6 transition-all",
@@ -969,6 +1005,9 @@ export default function Index() {
           userId={user?.id || ""}
         />
       )}
+
+      {/* Emergency AI Chatbot - Always Available */}
+      <EmergencyAIChatbot />
     </DashboardLayout>
   );
 }
