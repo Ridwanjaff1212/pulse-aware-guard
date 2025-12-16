@@ -214,12 +214,22 @@ export default function InstallPage() {
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6">
           <h3 className="font-semibold text-foreground mb-2">Share with Emergency Contacts</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Your contacts should install SafePulse too so they can receive your emergency alerts
+            Your contacts should register so they can receive your emergency alerts instantly
           </p>
-          <Button variant="outline" onClick={handleShare} className="w-full">
-            <Share2 className="h-4 w-4 mr-2" />
-            Share Install Link
-          </Button>
+          <div className="space-y-2">
+            <Button variant="outline" onClick={handleShare} className="w-full">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share Install Link
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => navigate("/contact-register")}
+            >
+              Contact Registration Page
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
         </div>
 
         {/* Continue Button */}

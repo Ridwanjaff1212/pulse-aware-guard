@@ -51,6 +51,7 @@ export function useDecoyMode() {
   const deactivateDecoy = useCallback((opts?: { silent?: boolean }) => {
     setState(prev => ({ ...prev, isDecoyActive: false }));
     localStorage.removeItem('safepulse_decoy_active');
+    localStorage.setItem('safepulse_seen_dashboard', 'true');
 
     if (!opts?.silent) {
       toast({
@@ -114,11 +115,15 @@ export function useDecoyMode() {
 
   }, [state.lastGestureTime, state.isDecoyActive, resetGesture, activateDecoy, deactivateDecoy]);
 
-  // Check localStorage on mount
+  // Check localStorage on mount - default to decoy mode for new sessions
   useEffect(() => {
-    const decoyActive = localStorage.getItem('safepulse_decoy_active') === 'true';
-    if (decoyActive) {
+    const hasSeenDashboard = localStorage.getItem('safepulse_seen_dashboard');
+    const decoyActive = localStorage.getItem('safepulse_decoy_active');
+    
+    // First time users or returning with decoy active - show calculator
+    if (!hasSeenDashboard || decoyActive === 'true') {
       setState(prev => ({ ...prev, isDecoyActive: true }));
+      localStorage.setItem('safepulse_decoy_active', 'true');
     }
   }, []);
 

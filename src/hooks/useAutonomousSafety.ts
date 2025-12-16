@@ -21,7 +21,7 @@ export interface DangerState {
 
 const SIGNAL_WEIGHTS = {
   motion: 25,
-  voice: 30,
+  voice: 40, // Increased weight for voice signals
   inactivity: 20,
   location: 15,
   time: 10,
@@ -34,6 +34,13 @@ const RISK_THRESHOLDS = {
   high: 80,
   emergency: 81,
 };
+
+// Emergency keywords that trigger immediate high-alert (600+ raw score concept)
+const EMERGENCY_KEYWORDS = [
+  "help", "stop", "no", "please", "emergency", "scared", "danger", "hurt",
+  "rape", "attack", "assault", "kidnap", "gun", "knife", "kill", "die",
+  "police", "911", "fire", "ambulance", "save me", "let me go", "get away"
+];
 
 export function useAutonomousSafety(userId: string | undefined, onWitnessThreshold?: () => void) {
   const { toast } = useToast();
@@ -173,14 +180,27 @@ export function useAutonomousSafety(userId: string | undefined, onWitnessThresho
         if (event.results[i].isFinal) {
           const text = event.results[i][0].transcript.toLowerCase();
           
-          // Detect distress words
-          const distressWords = ["help", "stop", "no", "please", "emergency", "scared", "danger", "hurt"];
+          // Detect emergency keywords - high priority triggers
+          const criticalKeywords = ["help", "rape", "attack", "assault", "kidnap", "gun", "knife", "kill", "die", "police", "911", "save me", "let me go"];
+          const criticalCount = criticalKeywords.filter(word => text.includes(word)).length;
+          
+          // Standard distress keywords
+          const distressWords = ["stop", "no", "please", "emergency", "scared", "danger", "hurt", "ambulance", "fire", "get away"];
           const distressCount = distressWords.filter(word => text.includes(word)).length;
           
-          if (distressCount > 0) {
+          // Critical keywords trigger immediate high score (simulating 600+ raw score)
+          if (criticalCount > 0) {
             addSignal({
               type: "voice",
-              value: Math.min(100, distressCount * 40),
+              value: 100, // Max value - triggers emergency
+              description: `🚨 CRITICAL: Emergency keyword detected "${text.slice(0, 50)}"`,
+            });
+            console.log("[ASM] 🚨 CRITICAL EMERGENCY KEYWORD DETECTED - Triggering high alert");
+          } else if (distressCount > 0) {
+            // Standard distress words add significant score
+            addSignal({
+              type: "voice",
+              value: Math.min(100, distressCount * 50),
               description: `Detected distress indicators: ${distressCount} keywords`,
             });
           }

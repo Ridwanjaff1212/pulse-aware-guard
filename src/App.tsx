@@ -20,6 +20,7 @@ import Vitals from "./pages/Vitals";
 import TruthLockTools from "./pages/TruthLockTools";
 import Panic from "./pages/Panic";
 import Install from "./pages/Install";
+import ContactRegister from "./pages/ContactRegister";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/truth-lock" element={<TruthLockTools />} />
             <Route path="/panic" element={<Panic />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/contact-register" element={<ContactRegister />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
