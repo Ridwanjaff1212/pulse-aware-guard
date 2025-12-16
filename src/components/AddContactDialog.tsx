@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Phone, Heart, Check } from "lucide-react";
+import { User, Phone, Heart, Check, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,7 @@ interface AddContactDialogProps {
   onAddContact: (contact: {
     name: string;
     phone: string;
+    email: string;
     relationship: string;
   }) => void;
 }
@@ -43,23 +44,26 @@ export function AddContactDialog({
 }: AddContactDialogProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [relationship, setRelationship] = useState("");
 
   const handleSave = () => {
-    if (name.trim() && phone.trim() && relationship) {
+    if (name.trim() && (phone.trim() || email.trim()) && relationship) {
       onAddContact({
         name: name.trim(),
         phone: phone.trim(),
+        email: email.trim(),
         relationship,
       });
       setName("");
       setPhone("");
+      setEmail("");
       setRelationship("");
       onOpenChange(false);
     }
   };
 
-  const isValid = name.trim() && phone.trim() && relationship;
+  const isValid = name.trim() && (phone.trim() || email.trim()) && relationship;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,6 +104,22 @@ export function AddContactDialog({
                 onChange={(e) => setPhone(e.target.value)}
                 className="bg-secondary/50 border-border pl-10"
                 type="tel"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Email Address <span className="text-xs text-muted-foreground">(for emergency alerts)</span>
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="contact@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-secondary/50 border-border pl-10"
+                type="email"
               />
             </div>
           </div>
