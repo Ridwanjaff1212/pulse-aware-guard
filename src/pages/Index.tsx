@@ -17,6 +17,7 @@ import { SafeZonesManager } from "@/components/SafeZonesManager";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Shield, AlertTriangle, Users, Lock, Brain, Activity, Bell, MapPin } from "lucide-react";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -121,19 +122,33 @@ const Index = () => {
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            address: "Fetching address...",
-          });
-          // In a real app, we'd use a geocoding API here
-          setTimeout(() => {
-            setCurrentLocation(prev => prev ? { ...prev, address: "Current Location" } : null);
-          }, 1000);
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          // Use reverse geocoding with a free service
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+            );
+            const data = await response.json();
+            const address = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
+            setCurrentLocation({ lat, lng, address });
+          } catch {
+            setCurrentLocation({ 
+              lat, 
+              lng, 
+              address: `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}` 
+            });
+          }
         },
         (error) => {
           console.error("Geolocation error:", error);
+          toast({
+            title: "📍 Location Access",
+            description: "Enable location for better safety features.",
+          });
         }
       );
     }
@@ -147,7 +162,7 @@ const Index = () => {
       .from("safety_incidents")
       .insert({
         user_id: user!.id,
-        type: "SOS Activated",
+        type: "🚨 SOS Activated",
         description: "Emergency SOS button was manually activated by user.",
         status: "active",
         location_lat: currentLocation?.lat,
@@ -168,9 +183,22 @@ const Index = () => {
       });
     }
 
+    // Create emergency alert for community
+    if (currentLocation) {
+      await supabase.from("emergency_alerts").insert({
+        user_id: user!.id,
+        incident_id: incident?.id,
+        latitude: currentLocation.lat,
+        longitude: currentLocation.lng,
+        message: "Emergency SOS activated. User needs help.",
+        status: "active",
+        radius_meters: 1000,
+      });
+    }
+
     toast({
       title: "🚨 Emergency Mode Activated",
-      description: "Alerting your emergency contacts and sharing your location.",
+      description: "Alerting your emergency contacts and nearby users.",
       variant: "destructive",
     });
 
@@ -188,7 +216,7 @@ const Index = () => {
     if (!error) {
       loadContacts();
       toast({
-        title: "Contact Added",
+        title: "✅ Contact Added",
         description: `${contact.name} has been added to your emergency contacts.`,
       });
     }
@@ -199,11 +227,11 @@ const Index = () => {
     
     await supabase
       .from("profiles")
-      .update({ emergency_keyword: keyword })
+      .update({ emergency_keyword: keyword, keyword_enabled: true })
       .eq("user_id", user!.id);
     
     toast({
-      title: "Keyword Updated",
+      title: "🎤 Keyword Updated",
       description: "Your emergency voice keyword has been saved.",
     });
   };
@@ -219,6 +247,15 @@ const Index = () => {
 
     if (newValue) {
       getCurrentLocation();
+      toast({
+        title: "📍 Location Sharing Enabled",
+        description: "Your location will be shared during emergencies.",
+      });
+    } else {
+      toast({
+        title: "📍 Location Sharing Disabled",
+        description: "Your location will not be shared.",
+      });
     }
   };
 
@@ -226,7 +263,9 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
+            <Shield className="h-8 w-8 text-primary" />
+          </div>
           <p className="text-muted-foreground">Loading SafePulse...</p>
         </div>
       </div>
@@ -249,46 +288,115 @@ const Index = () => {
           {/* Emergency Button - Center Stage */}
           <div className="flex flex-col items-center justify-center py-8">
             <EmergencyButton onTrigger={handleEmergencyTrigger} />
+            <p className="text-muted-foreground text-sm mt-4">
+              Press and hold for 3 seconds to activate emergency mode
+            </p>
           </div>
 
-          {/* AI Analysis Button */}
-          <div className="flex justify-center gap-4 mt-4">
-            <button
-              onClick={() => setShowAIPanel(true)}
-              className="px-4 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
-            >
-              🤖 AI Safety Analysis
-            </button>
-            <button
-              onClick={() => setShowMotionDetector(true)}
-              className="px-4 py-2 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm font-medium hover:bg-warning/20 transition-colors"
-            >
-              📱 Motion Detection
-            </button>
-            <button
-              onClick={() => setShowVoiceAnalyzer(true)}
-              className="px-4 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent text-sm font-medium hover:bg-accent/20 transition-colors"
-            >
-              🎤 Voice Analysis
-            </button>
+          {/* Module 1: Smart Emergency Detection */}
+          <div className="rounded-2xl border border-border bg-card p-4 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Brain className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">🧩 Smart Detection</h3>
+                <p className="text-xs text-muted-foreground">AI-powered emergency recognition</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                onClick={() => setKeywordDialogOpen(true)}
+                className="p-3 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+              >
+                <span className="text-lg">🎤</span>
+                <p className="text-xs font-medium text-foreground mt-1">Voice Keyword</p>
+                <p className="text-[10px] text-muted-foreground">"{emergencyKeyword}"</p>
+              </button>
+              <button
+                onClick={() => setShowMotionDetector(true)}
+                className="p-3 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+              >
+                <span className="text-lg">📱</span>
+                <p className="text-xs font-medium text-foreground mt-1">Fall Detection</p>
+                <p className="text-[10px] text-muted-foreground">Gyroscope sensor</p>
+              </button>
+              <button
+                onClick={() => setShowVoiceAnalyzer(true)}
+                className="p-3 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+              >
+                <span className="text-lg">🔊</span>
+                <p className="text-xs font-medium text-foreground mt-1">Voice Stress</p>
+                <p className="text-[10px] text-muted-foreground">Distress analysis</p>
+              </button>
+              <button
+                onClick={() => setShowAIPanel(true)}
+                className="p-3 rounded-xl bg-secondary/50 border border-border hover:bg-secondary transition-colors text-left"
+              >
+                <span className="text-lg">🤖</span>
+                <p className="text-xs font-medium text-foreground mt-1">AI Analysis</p>
+                <p className="text-[10px] text-muted-foreground">Risk assessment</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Module 2: AI Risk Analysis */}
+          <div className="rounded-2xl border border-border bg-card p-4 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">🧠 AI Risk Engine</h3>
+                <p className="text-xs text-muted-foreground">Context-aware safety scoring</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-safe/10 border border-safe/30 text-center">
+                <span className="text-2xl">✅</span>
+                <p className="text-xs font-medium text-safe mt-1">Safe Zone</p>
+                <p className="text-[10px] text-muted-foreground">Normal activity</p>
+              </div>
+              <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 text-center">
+                <span className="text-2xl">⚠️</span>
+                <p className="text-xs font-medium text-warning mt-1">Monitoring</p>
+                <p className="text-[10px] text-muted-foreground">Unusual pattern</p>
+              </div>
+              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-center">
+                <span className="text-2xl">🚨</span>
+                <p className="text-xs font-medium text-destructive mt-1">Emergency</p>
+                <p className="text-[10px] text-muted-foreground">Help needed</p>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Main Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Left Column */}
+          {/* Left Column - Module 3: Emergency Response */}
           <div className="space-y-6">
-            <QuickActions
-              onKeywordSetup={() => setKeywordDialogOpen(true)}
-              onLocationShare={handleToggleLocationSharing}
-              onCommunityAlert={() => {
-                toast({
-                  title: "Community Alert",
-                  description: "This feature alerts nearby SafePulse users.",
-                });
-              }}
-              onCaptureEvidence={() => setShowIncidentPack(true)}
-            />
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">🚨 Response Network</h3>
+                  <p className="text-xs text-muted-foreground">Multi-channel emergency alerts</p>
+                </div>
+              </div>
+              <QuickActions
+                onKeywordSetup={() => setKeywordDialogOpen(true)}
+                onLocationShare={handleToggleLocationSharing}
+                onCommunityAlert={() => {
+                  toast({
+                    title: "📢 Community Alert",
+                    description: "Nearby SafePulse users will be notified.",
+                  });
+                }}
+                onCaptureEvidence={() => setShowIncidentPack(true)}
+              />
+            </div>
 
             <LocationStatus
               isSharing={isLocationSharing}
@@ -302,16 +410,18 @@ const Index = () => {
               className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📍</span>
+                <div className="h-10 w-10 rounded-xl bg-safe/10 flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-safe" />
+                </div>
                 <div>
-                  <h3 className="font-medium text-foreground">Safe Zones</h3>
+                  <h3 className="font-medium text-foreground">📍 Safe Zones</h3>
                   <p className="text-sm text-muted-foreground">Manage your trusted locations</p>
                 </div>
               </div>
             </button>
           </div>
 
-          {/* Right Column */}
+          {/* Right Column - Module 4: Privacy & Support */}
           <div className="space-y-6">
             <EmergencyContacts
               contacts={contacts}
@@ -319,14 +429,51 @@ const Index = () => {
             />
 
             <SafetyIncidents incidents={incidents} />
+
+            {/* Privacy Module */}
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Lock className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">🔐 Privacy & Stealth</h3>
+                  <p className="text-xs text-muted-foreground">Your data, your control</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-secondary/50 border border-border">
+                  <span className="text-lg">🔒</span>
+                  <p className="text-xs font-medium text-foreground mt-1">Encrypted</p>
+                  <p className="text-[10px] text-muted-foreground">End-to-end secure</p>
+                </div>
+                <div className="p-3 rounded-xl bg-secondary/50 border border-border">
+                  <span className="text-lg">🕵️</span>
+                  <p className="text-xs font-medium text-foreground mt-1">Stealth Mode</p>
+                  <p className="text-[10px] text-muted-foreground">Disguised interface</p>
+                </div>
+                <div className="p-3 rounded-xl bg-secondary/50 border border-border">
+                  <span className="text-lg">📼</span>
+                  <p className="text-xs font-medium text-foreground mt-1">Auto Recording</p>
+                  <p className="text-[10px] text-muted-foreground">Evidence capture</p>
+                </div>
+                <div className="p-3 rounded-xl bg-secondary/50 border border-border">
+                  <span className="text-lg">💚</span>
+                  <p className="text-xs font-medium text-foreground mt-1">Recovery</p>
+                  <p className="text-[10px] text-muted-foreground">Post-incident support</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Privacy Notice */}
-        <div className="mt-8 rounded-xl border border-border/50 bg-card/50 p-4 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-8 rounded-xl border border-safe/30 bg-safe/5 p-4 text-center">
+          <p className="text-sm text-safe font-medium">
             🔒 Your privacy matters. SafePulse only activates sensors during risk events.
-            No continuous tracking. No always-on listening.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            No continuous tracking • No always-on listening • Your data stays yours
           </p>
         </div>
       </main>
@@ -358,7 +505,7 @@ const Index = () => {
           onAlert={(type) => {
             setSafetyLevel("monitoring");
             toast({
-              title: "Motion Alert",
+              title: "📱 Motion Alert",
               description: `Detected: ${type}. Monitoring situation...`,
             });
           }}
@@ -372,7 +519,7 @@ const Index = () => {
             if (level === "high" || level === "severe") {
               setSafetyLevel("monitoring");
               toast({
-                title: "Voice Stress Detected",
+                title: "🎤 Voice Stress Detected",
                 description: "High stress levels detected. Are you okay?",
                 variant: "destructive",
               });
