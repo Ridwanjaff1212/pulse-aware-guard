@@ -51,9 +51,10 @@ export function IncidentCamera({ userId, incidentId, autoStart, className }: Inc
     
     setupPreview();
     
+    const currentVideoRef = videoRef.current;
     return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
+      if (currentVideoRef?.srcObject) {
+        const stream = currentVideoRef.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
       }
     };
