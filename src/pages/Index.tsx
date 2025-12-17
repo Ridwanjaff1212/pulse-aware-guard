@@ -5,7 +5,7 @@ import {
   MapPin, Users, Mic, Eye, TrendingUp, Clock,
   CheckCircle2, Zap, Heart, Power, Radio,
   Smartphone, Volume2, Lock, Waves, Video, Package, Calculator,
-  Radar, ShieldAlert, Network
+  Radar, ShieldAlert, Network, Film
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,8 @@ import { TruthLockPanel } from "@/components/TruthLockPanel";
 import { PreDangerPanel } from "@/components/PreDangerPanel";
 import { CommunityShieldPanel } from "@/components/CommunityShieldPanel";
 import { EmergencyAIChatbot } from "@/components/EmergencyAIChatbot";
+import { DemoModePanel } from "@/components/DemoModePanel";
+import { AIVisionAssist } from "@/components/AIVisionAssist";
 import { useAutonomousSafety } from "@/hooks/useAutonomousSafety";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useEnhancedKeywordDetection } from "@/hooks/useEnhancedKeywordDetection";
@@ -615,6 +617,29 @@ export default function Index() {
           onActivate={witnessMode.activate}
           onDeactivate={witnessMode.deactivate}
           onGenerateReport={witnessMode.generateIncidentReport}
+        />
+
+        {/* AI Vision Assist - Accessibility Module */}
+        <AIVisionAssist 
+          isEmergencyMode={dangerState.isMonitoring && dangerState.autonomousMode}
+          onThreatDetected={(detection) => {
+            addSignal({
+              type: 'motion',
+              value: detection.confidence * 100,
+              description: `Vision: ${detection.label}`,
+            });
+          }}
+        />
+
+        {/* Demo Mode Panel - For Hackathon Presentations */}
+        <DemoModePanel 
+          onDangerScoreChange={(score) => {
+            addSignal({
+              type: 'pattern',
+              value: score,
+              description: 'Demo mode simulation',
+            });
+          }}
         />
 
         {/* Truth Lock Panel */}
